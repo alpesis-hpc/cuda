@@ -1,0 +1,7 @@
+# editor
+*.swp
+*.swo
+*.swn
+
+# build
+benchmarks/build/
