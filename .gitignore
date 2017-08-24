@@ -4,4 +4,4 @@
 *.swn
 
 # build
-benchmarks/build/
+_build/
