@@ -27,10 +27,12 @@ include makefiles/tests.make
 # ----------------------------------------------------------------------------
 # compiler
 
-CC = gcc
+CC = nvcc
 
-CC_CFLAGS = -I$(INC_DIR) 
-CC_LDFLAGS = 
+CUDA_INC = /usr/local/cuda/include
+CUDA_LIB = /usr/local/cuda/lib64
+CC_CFLAGS = -I$(INC_DIR) -I$(CUDA_INC)
+CC_LDFLAGS = -L$(CUDA_LIB) -lcudart
 
 # ----------------------------------------------------------------------------
 # console
