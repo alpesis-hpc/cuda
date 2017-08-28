@@ -31,7 +31,7 @@ CC = nvcc
 
 CUDA_INC = /usr/local/cuda/include
 CUDA_LIB = /usr/local/cuda/lib64
-CC_CFLAGS = -I$(INC_DIR) -I$(CUDA_INC)
+CC_CFLAGS = -I$(INC_DIR) -I$(CUDA_INC) -arch sm_30
 CC_LDFLAGS = -L$(CUDA_LIB) -lcudart
 
 # ----------------------------------------------------------------------------
