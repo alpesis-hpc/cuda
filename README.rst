@@ -9,3 +9,6 @@ Getting Started
 ::
 
     $ make all
+
+    # nvidia profiling: nvprof ./_build/tests/test_array_sum
+    $ nvprof <path/to/exec>

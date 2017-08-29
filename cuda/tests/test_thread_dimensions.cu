@@ -1,4 +1,17 @@
+/* 
+ *            gridDim
+ *             (2, 1, 1)
+ * blockIdx              / blockDim
+ *   (0, 0, 0) (1, 0, 0) (3, 1, 1)
+ * threadIdx 
+ *   (0, 0, 0) (1, 0, 0) (2, 0, 0)
+ *   (0, 0, 0) (1, 0, 0) (2, 0, 0)
+ *
+ */
+
+
 #include <stdio.h>
+
 
 __global__ void checkIndex (void)
 {
@@ -12,7 +25,7 @@ __global__ void checkIndex (void)
 
 int main (void)
 {
-  int n_elements = 6;
+  int n_elements = 12;
 
   dim3 block(3);
   dim3 grid((n_elements + block.x - 1) / block.x);
