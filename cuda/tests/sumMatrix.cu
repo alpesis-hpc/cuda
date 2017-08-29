@@ -1,12 +1,15 @@
-#include "../common/common.h"
 #include <cuda_runtime.h>
 #include <stdio.h>
 
+#include "timer.h"
+#include "cu_engine.h"
+
 /*
- * This example demonstrates a simple vector sum on the GPU and on the host.
- * sumArraysOnGPU splits the work of the vector sum across CUDA threads on the
- * GPU. A 1D thread block and 1D grid are used. sumArraysOnHost sequentially
- * iterates through vector elements on the host.
+ * This example implements matrix element-wise addition on the host and GPU.
+ * sumMatrixOnHost iterates over the rows and columns of each matrix, adding
+ * elements from A and B together and storing the results in C. The current
+ * offset in each matrix is stored using pointer arithmetic. sumMatrixOnGPU2D
+ * implements the same logic, but using CUDA threads to process each matrix.
  */
 
 void initialData(float *ip, const int size)
@@ -15,14 +18,11 @@ void initialData(float *ip, const int size)
 
     for(i = 0; i < size; i++)
     {
-        ip[i] = (float)(rand() & 0xFF ) / 10.0f;
+        ip[i] = (float)( rand() & 0xFF ) / 10.0f;
     }
-
-    return;
 }
 
-void sumMatrixOnHost(float *A, float *B, float *C, const int nx,
-                     const int ny)
+void sumMatrixOnHost(float *A, float *B, float *C, const int nx, const int ny)
 {
     float *ia = A;
     float *ib = B;
@@ -33,7 +33,6 @@ void sumMatrixOnHost(float *A, float *B, float *C, const int nx,
         for (int ix = 0; ix < nx; ix++)
         {
             ic[ix] = ia[ix] + ib[ix];
-
         }
 
         ia += nx;
@@ -44,53 +43,40 @@ void sumMatrixOnHost(float *A, float *B, float *C, const int nx,
     return;
 }
 
-
 void checkResult(float *hostRef, float *gpuRef, const int N)
 {
     double epsilon = 1.0E-8;
-    bool match = 1;
 
     for (int i = 0; i < N; i++)
     {
         if (abs(hostRef[i] - gpuRef[i]) > epsilon)
         {
-            match = 0;
-            printf("host %f gpu %f\n", hostRef[i], gpuRef[i]);
+            printf("host %f gpu %f ", hostRef[i], gpuRef[i]);
+            printf("Arrays do not match.\n\n");
             break;
         }
     }
-
-    if (match)
-        printf("Arrays match.\n\n");
-    else
-        printf("Arrays do not match.\n\n");
 }
 
-// grid 1D block 1D
-__global__ void sumMatrixOnGPU1D(float *MatA, float *MatB, float *MatC, int nx,
-                                 int ny)
+// grid 2D block 2D
+__global__ void sumMatrixOnGPU2D(float *A, float *B, float *C, int NX, int NY)
 {
-    unsigned int ix = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned int ix = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int iy = blockIdx.y * blockDim.y + threadIdx.y;
+    unsigned int idx = iy * NX + ix;
 
-    if (ix < nx )
-        for (int iy = 0; iy < ny; iy++)
-        {
-            int idx = iy * nx + ix;
-            MatC[idx] = MatA[idx] + MatB[idx];
-        }
-
-
+    if (ix < NX && iy < NY)
+    {
+        C[idx] = A[idx] + B[idx];
+    }
 }
 
 int main(int argc, char **argv)
 {
-    printf("%s Starting...\n", argv[0]);
-
     // set up device
     int dev = 0;
     cudaDeviceProp deviceProp;
     CHECK(cudaGetDeviceProperties(&deviceProp, dev));
-    printf("Using Device %d: %s\n", dev, deviceProp.name);
     CHECK(cudaSetDevice(dev));
 
     // set up data size of matrix
@@ -99,7 +85,6 @@ int main(int argc, char **argv)
 
     int nxy = nx * ny;
     int nBytes = nxy * sizeof(float);
-    printf("Matrix size: nx %d ny %d\n", nx, ny);
 
     // malloc host memory
     float *h_A, *h_B, *hostRef, *gpuRef;
@@ -109,20 +94,18 @@ int main(int argc, char **argv)
     gpuRef = (float *)malloc(nBytes);
 
     // initialize data at host side
-    double iStart = seconds();
+    size_t iStart = seconds();
     initialData(h_A, nxy);
     initialData(h_B, nxy);
-    double iElaps = seconds() - iStart;
-    printf("initialize matrix elapsed %f sec\n", iElaps);
+    size_t iElaps = seconds() - iStart;
 
     memset(hostRef, 0, nBytes);
     memset(gpuRef, 0, nBytes);
 
     // add matrix at host side for result checks
     iStart = seconds();
-    sumMatrixOnHost(h_A, h_B, hostRef, nx, ny);
+    sumMatrixOnHost (h_A, h_B, hostRef, nx, ny);
     iElaps = seconds() - iStart;
-    printf("sumMatrixOnHost elapsed %f sec\n", iElaps);
 
     // malloc device global memory
     float *d_MatA, *d_MatB, *d_MatC;
@@ -136,18 +119,26 @@ int main(int argc, char **argv)
 
     // invoke kernel at host side
     int dimx = 32;
-    dim3 block(dimx, 1);
-    dim3 grid((nx + block.x - 1) / block.x, 1);
+    int dimy = 32;
 
+    if(argc > 2)
+    {
+        dimx = atoi(argv[1]);
+        dimy = atoi(argv[2]);
+    }
+
+    dim3 block(dimx, dimy);
+    dim3 grid((nx + block.x - 1) / block.x, (ny + block.y - 1) / block.y);
+
+    // execute the kernel
+    CHECK(cudaDeviceSynchronize());
     iStart = seconds();
-    sumMatrixOnGPU1D<<<grid, block>>>(d_MatA, d_MatB, d_MatC, nx, ny);
+    sumMatrixOnGPU2D<<<grid, block>>>(d_MatA, d_MatB, d_MatC, nx, ny);
     CHECK(cudaDeviceSynchronize());
     iElaps = seconds() - iStart;
-    printf("sumMatrixOnGPU1D <<<(%d,%d), (%d,%d)>>> elapsed %f sec\n", grid.x,
+    printf("sumMatrixOnGPU2D <<<(%d,%d), (%d,%d)>>> elapsed %d ms\n", grid.x,
            grid.y,
            block.x, block.y, iElaps);
-
-    // check kernel error
     CHECK(cudaGetLastError());
 
     // copy kernel result back to host side
@@ -170,5 +161,5 @@ int main(int argc, char **argv)
     // reset device
     CHECK(cudaDeviceReset());
 
-    return (0);
+    return EXIT_SUCCESS;
 }

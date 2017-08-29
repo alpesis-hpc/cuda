@@ -3,7 +3,8 @@
 # compiler
 
 TESTS_CFLAGS = $(CC_CFLAGS) \
-               -I$(BUILD_UNITY_DIR)
+               -I$(BUILD_UNITY_DIR) \
+               -I$(BUILD_INC_DIR)
 
 TESTS_LDFLAGS = $(CC_LDFLAGS) \
                 -L$(BUILD_UNITY_DIR) -lunity

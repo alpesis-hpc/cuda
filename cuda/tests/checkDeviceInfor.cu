@@ -1,6 +1,7 @@
-#include "../common/common.h"
 #include <cuda_runtime.h>
 #include <stdio.h>
+
+#include "cu_engine.h"
 
 /*
  * Display a variety of information on the first CUDA device in this system,
