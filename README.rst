@@ -4,7 +4,12 @@ CUDA
 
 Example List:
 
+
 - template_arraypow2
+- global_memory
+- shared_constant_memory
+- streams_and_concurrency
+
 
 ::
 
