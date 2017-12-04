@@ -4,7 +4,7 @@
 
 
 template <class T>
-void ArrayPow2(Array2D<T>& in, Array2D<T>& result)
+void ArrayPow2CPU(Array2D<T>& in, Array2D<T>& result)
 {
     std::transform(in.begin(), in.end(), result.begin(), [](const T& a){ return a * a; });
 }
