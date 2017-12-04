@@ -2,13 +2,24 @@
 CUDA
 ##############################################################################
 
-Example List:
+==============================================================================
+Example List
+==============================================================================
 
+
+CUDA syntax
 
 - template_arraypow2
+
+CUDA Advanced
+
 - global_memory
 - shared_constant_memory
 - streams_and_concurrency
+- tuning_primitives
+- cuda_libs
+- multi_gpu
+- optimization_and_debugging
 
 
 ::
